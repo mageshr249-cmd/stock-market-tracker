@@ -34,78 +34,36 @@ const MOCK_DATA = [
     change: -1.23,
     changePercent: -0.32,
     volume: 34567800,
-    marketCap: 890000000000,
-    high: 379.87,
-    low: 376.21
+    marketCap: 850000000000,
+    high: 380.12,
+    low: 376.89
   },
   {
     symbol: 'IWM',
     name: 'iShares Russell 2000 ETF',
-    price: 201.34,
-    change: 0.89,
-    changePercent: 0.44,
+    price: 198.76,
+    change: 3.45,
+    changePercent: 1.77,
     volume: 23456700,
-    marketCap: 450000000000,
-    high: 202.15,
-    low: 199.87
+    marketCap: 45000000000,
+    high: 199.23,
+    low: 195.34
   }
 ];
 
 /**
- * Fetch detailed stock information including quote, profile, and news
- * @param {string} symbol - Stock symbol to fetch details for
- * @returns {Promise<Object>} Stock details including quote, profile, and news
+ * Fetch comprehensive stock details including quote, profile, and news
+ * @param {string} symbol - Stock symbol (e.g., 'AAPL')
+ * @returns {Promise<Object>} Object containing quote, profile, and news data
  */
 export const fetchStockDetails = async (symbol) => {
-  const apiKey = API_CONFIG.FINNHUB_API_KEY;
-  const baseUrl = API_CONFIG.FINNHUB_BASE_URL;
-  
-  // Return mock data if no API key is configured
-  if (!apiKey || apiKey === 'YOUR_FINNHUB_API_KEY_HERE') {
-    console.warn('Using mock data - please configure FINNHUB_API_KEY for live data');
-    
-    // Return mock stock details
-    return {
-      quote: {
-        c: 150.25, // current price
-        h: 152.10, // high price of the day
-        l: 149.80, // low price of the day
-        o: 151.00, // open price of the day
-        pc: 149.50, // previous close price
-        dp: 0.75,  // change
-        dp: 0.50   // percent change
-      },
-      profile: {
-        country: 'US',
-        currency: 'USD',
-        exchange: 'NASDAQ NMS - GLOBAL MARKET',
-        finnhubIndustry: 'Technology',
-        ipo: '1980-12-12',
-        logo: '',
-        marketCapitalization: 2500000,
-        name: `${symbol} Company`,
-        phone: '14089961010.0',
-        shareOutstanding: 16406.4,
-        ticker: symbol,
-        weburl: 'https://example.com'
-      },
-      news: [
-        {
-          category: 'technology',
-          datetime: Math.floor(Date.now() / 1000),
-          headline: `${symbol} Reports Strong Quarterly Results`,
-          id: 12345,
-          image: '',
-          related: symbol,
-          source: 'Example News',
-          summary: `This is a sample news article about ${symbol}.`,
-          url: 'https://example.com/news'
-        }
-      ]
-    };
-  }
-
   try {
+    const { FINNHUB_API_KEY: apiKey, FINNHUB_BASE_URL: baseUrl } = API_CONFIG;
+    
+    if (!apiKey || apiKey === 'YOUR_FINNHUB_API_KEY_HERE') {
+      throw new Error('Finnhub API key is required');
+    }
+
     // Fetch quote, profile, and news data in parallel
     const [quoteResponse, profileResponse, newsResponse] = await Promise.all([
       fetch(`${baseUrl}/quote?symbol=${symbol}&token=${apiKey}`),
@@ -157,10 +115,36 @@ export const fetchMarketData = async () => {
   return MOCK_DATA;
 };
 
+/**
+ * Legacy function to fetch stock quote data - returns mock data for compatibility
+ * @param {string} symbol - Stock symbol (e.g., 'AAPL')
+ * @returns {Promise<Object>} Mock stock quote data
+ */
+export const fetchStockQuote = async (symbol) => {
+  // Return mock data for legacy compatibility
+  console.log(`Fetching mock quote data for ${symbol} (legacy compatibility)`);
+  
+  // Find matching symbol in MOCK_DATA, or return default data
+  const mockStock = MOCK_DATA.find(stock => stock.symbol === symbol) || {
+    symbol: symbol,
+    name: `${symbol} Corporation`,
+    price: 150.00,
+    change: 2.50,
+    changePercent: 1.69,
+    volume: 1000000,
+    marketCap: 50000000000,
+    high: 152.00,
+    low: 148.50
+  };
+  
+  return mockStock;
+};
+
 // Legacy export for backward compatibility
 export default {
   API_CONFIG,
   MOCK_DATA,
   fetchStockDetails,
-  fetchMarketData
+  fetchMarketData,
+  fetchStockQuote
 };
