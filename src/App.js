@@ -60,10 +60,13 @@ function App() {
   };
 
   // Universal search handler - supports search-to-modal integration
-  const handleSymbolSelect = async (symbol) => {
+  const handleSymbolSelect = async (selectedOption) => {
     try {
       setModalLoading(true);
       setShowModal(true);
+      
+      // Extract symbol from search result (could be object or string)
+      const symbol = typeof selectedOption === 'object' ? selectedOption.symbol : selectedOption;
       
       // Fetch detailed data for the searched symbol
       const detailedData = await fetchStockDetails(symbol);
@@ -71,9 +74,10 @@ function App() {
     } catch (err) {
       console.error('Error fetching stock details for search:', err);
       // Create a fallback stock object for search results
+      const symbol = typeof selectedOption === 'object' ? selectedOption.symbol : selectedOption;
       const fallbackStock = {
         symbol: symbol,
-        name: symbol,
+        name: typeof selectedOption === 'object' ? selectedOption.description || symbol : symbol,
         price: 0,
         change: 0,
         changePercent: 0
@@ -88,10 +92,14 @@ function App() {
     <div className="App">
       <header className="app-header">
         <div className="header-content">
-          <h1>📈 Stock Market Tracker</h1>
-          <SearchBar 
+          <div className="header-title">
+            📈 Stock Market Tracker
+          </div>
+          <SearchBar
             onSymbolSelect={handleSymbolSelect}
             placeholder="Search stocks, funds, bonds..."
+            apiProvider="finnhub"
+            apiKey={process.env.REACT_APP_FINNHUB_API_KEY || 'c343v2iad3idr8a2ed70'}
           />
         </div>
         
@@ -131,7 +139,7 @@ function App() {
       </main>
       
       <footer className="app-footer">
-        <p>Real-time market data • Updates every 30 seconds</p>
+        Real-time market data • Updates every 30 seconds
       </footer>
       
       {/* Modern Yahoo-view Modal with Universal Search Integration */}
