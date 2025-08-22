@@ -37,9 +37,20 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleStockClick = (stock) => {
-    setSelectedStock(stock);
-    setShowModal(true);
+  const handleStockClick = async (stock) => {
+    try {
+      setModalLoading(true);
+      setShowModal(true);
+      
+      // Fetch detailed data for the selected stock
+      const detailedData = await fetchStockDetails(stock.symbol);
+      setSelectedStock(detailedData);
+    } catch (err) {
+      console.error('Error fetching stock details:', err);
+      setSelectedStock(stock); // Fallback to basic data
+    } finally {
+      setModalLoading(false);
+    }
   };
 
   const handleCloseModal = () => {
@@ -48,31 +59,36 @@ function App() {
     setModalLoading(false);
   };
 
+  // Universal search handler - supports search-to-modal integration
   const handleSymbolSelect = async (symbol) => {
     try {
       setModalLoading(true);
       setShowModal(true);
       
-      // Fetch detailed data for the selected symbol
-      const stockDetails = await fetchStockDetails(symbol);
-      
-      setSelectedStock(stockDetails);
-      setModalLoading(false);
+      // Fetch detailed data for the searched symbol
+      const detailedData = await fetchStockDetails(symbol);
+      setSelectedStock(detailedData);
     } catch (err) {
-      console.error('Error fetching stock details:', err);
-      setError(`Failed to fetch details for ${symbol}`);
+      console.error('Error fetching stock details for search:', err);
+      // Create a fallback stock object for search results
+      const fallbackStock = {
+        symbol: symbol,
+        name: symbol,
+        price: 0,
+        change: 0,
+        changePercent: 0
+      };
+      setSelectedStock(fallbackStock);
+    } finally {
       setModalLoading(false);
-      setShowModal(false);
     }
   };
 
   return (
     <div className="App">
       <header className="app-header">
-        <h1>Stock Market Tracker</h1>
-        
-        {/* Universal Search Bar */}
-        <div className="search-container">
+        <div className="header-content">
+          <h1>📈 Stock Market Tracker</h1>
           <SearchBar 
             onSymbolSelect={handleSymbolSelect}
             placeholder="Search stocks, funds, bonds..."
@@ -118,7 +134,7 @@ function App() {
         <p>Real-time market data • Updates every 30 seconds</p>
       </footer>
       
-      {/* Detailed Stock Modal */}
+      {/* Modern Yahoo-view Modal with Universal Search Integration */}
       {showModal && (
         <DetailedStockView
           stock={selectedStock}
