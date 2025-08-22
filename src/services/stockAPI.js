@@ -3,6 +3,7 @@ const API_CONFIG = {
   // Finnhub API configuration
   FINNHUB_API_KEY: process.env.REACT_APP_FINNHUB_API_KEY || 'YOUR_FINNHUB_API_KEY_HERE',
   FINNHUB_BASE_URL: 'https://finnhub.io/api/v1',
+  
   // Legacy configuration (kept for backward compatibility)
   API_KEY: process.env.REACT_APP_STOCK_API_KEY || 'YOUR_API_KEY_HERE',
   BASE_URL: 'https://api.example.com/v1',
@@ -34,53 +35,66 @@ const MOCK_DATA = [
     changePercent: -0.32,
     volume: 34567800,
     marketCap: 890000000000,
-    high: 380.67,
-    low: 376.89
+    high: 379.87,
+    low: 376.21
+  },
+  {
+    symbol: 'IWM',
+    name: 'iShares Russell 2000 ETF',
+    price: 201.34,
+    change: 0.89,
+    changePercent: 0.44,
+    volume: 23456700,
+    marketCap: 450000000000,
+    high: 202.15,
+    low: 199.87
   }
 ];
 
 /**
- * Fetches comprehensive stock details including quote, profile, and news from Finnhub
- * @param {string} symbol - The stock symbol (e.g., 'AAPL', 'GOOGL')
- * @returns {Promise<Object>} Object containing quote, profile, and news data
+ * Fetch detailed stock information including quote, profile, and news
+ * @param {string} symbol - Stock symbol to fetch details for
+ * @returns {Promise<Object>} Stock details including quote, profile, and news
  */
 export const fetchStockDetails = async (symbol) => {
-  if (!symbol) {
-    throw new Error('Stock symbol is required');
-  }
-
   const apiKey = API_CONFIG.FINNHUB_API_KEY;
   const baseUrl = API_CONFIG.FINNHUB_BASE_URL;
-
+  
+  // Return mock data if no API key is configured
   if (!apiKey || apiKey === 'YOUR_FINNHUB_API_KEY_HERE') {
-    console.warn('Finnhub API key not configured, using mock data');
-    // Return mock data structure for development
+    console.warn('Using mock data - please configure FINNHUB_API_KEY for live data');
+    
+    // Return mock stock details
     return {
       quote: {
-        c: 150.00, // current price
-        h: 152.00, // high price
-        l: 148.00, // low price
-        o: 149.00, // open price
-        pc: 148.50, // previous close
-        t: Date.now() / 1000 // timestamp
+        c: 150.25, // current price
+        h: 152.10, // high price of the day
+        l: 149.80, // low price of the day
+        o: 151.00, // open price of the day
+        pc: 149.50, // previous close price
+        dp: 0.75,  // change
+        dp: 0.50   // percent change
       },
       profile: {
-        name: `${symbol} Company`,
-        ticker: symbol,
-        exchange: 'NASDAQ',
-        ipo: '2000-01-01',
-        marketCapitalization: 1000000,
-        shareOutstanding: 1000000,
+        country: 'US',
+        currency: 'USD',
+        exchange: 'NASDAQ NMS - GLOBAL MARKET',
+        finnhubIndustry: 'Technology',
+        ipo: '1980-12-12',
         logo: '',
-        weburl: `https://example.com`,
-        finnhubIndustry: 'Technology'
+        marketCapitalization: 2500000,
+        name: `${symbol} Company`,
+        phone: '14089961010.0',
+        shareOutstanding: 16406.4,
+        ticker: symbol,
+        weburl: 'https://example.com'
       },
       news: [
         {
-          category: 'general',
-          datetime: Date.now() / 1000,
-          headline: `Latest news about ${symbol}`,
-          id: 1,
+          category: 'technology',
+          datetime: Math.floor(Date.now() / 1000),
+          headline: `${symbol} Reports Strong Quarterly Results`,
+          id: 12345,
           image: '',
           related: symbol,
           source: 'Example News',
@@ -133,9 +147,20 @@ const getDateString = (daysAgo) => {
   return date.toISOString().split('T')[0];
 };
 
+/**
+ * Fetch market data for homepage indices
+ * @returns {Promise<Array>} Market data array
+ */
+export const fetchMarketData = async () => {
+  // For now, return MOCK_DATA (can be replaced by real API logic)
+  console.log('Using mock data for market indices - can be replaced with real API logic');
+  return MOCK_DATA;
+};
+
 // Legacy export for backward compatibility
 export default {
   API_CONFIG,
   MOCK_DATA,
-  fetchStockDetails
+  fetchStockDetails,
+  fetchMarketData
 };
