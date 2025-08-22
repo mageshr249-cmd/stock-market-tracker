@@ -219,7 +219,7 @@ const SearchBar = ({
         
         {isLoading && (
           <div className="search-loading">
-            <div className="spinner" />
+            <div className="spinner"></div>
           </div>
         )}
         
