@@ -3,7 +3,8 @@ import './App.css';
 import IndexCard from './components/IndexCard';
 import DetailedStockView from './components/DetailedStockView';
 import LoadingSpinner from './components/LoadingSpinner';
-import { fetchMarketData } from './services/stockAPI';
+import SearchBar from './components/SearchBar';
+import { fetchMarketData, fetchStockDetails } from './services/stockAPI';
 
 function App() {
   const [marketData, setMarketData] = useState([]);
@@ -11,6 +12,7 @@ function App() {
   const [error, setError] = useState(null);
   const [selectedStock, setSelectedStock] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
 
   useEffect(() => {
     const loadMarketData = async () => {
@@ -43,12 +45,40 @@ function App() {
   const handleCloseModal = () => {
     setShowModal(false);
     setSelectedStock(null);
+    setModalLoading(false);
+  };
+
+  const handleSymbolSelect = async (symbol) => {
+    try {
+      setModalLoading(true);
+      setShowModal(true);
+      
+      // Fetch detailed data for the selected symbol
+      const stockDetails = await fetchStockDetails(symbol);
+      
+      setSelectedStock(stockDetails);
+      setModalLoading(false);
+    } catch (err) {
+      console.error('Error fetching stock details:', err);
+      setError(`Failed to fetch details for ${symbol}`);
+      setModalLoading(false);
+      setShowModal(false);
+    }
   };
 
   return (
     <div className="App">
       <header className="app-header">
         <h1>Stock Market Tracker</h1>
+        
+        {/* Universal Search Bar */}
+        <div className="search-container">
+          <SearchBar 
+            onSymbolSelect={handleSymbolSelect}
+            placeholder="Search stocks, funds, bonds..."
+          />
+        </div>
+        
         <div className="last-updated">
           Last updated: {new Date().toLocaleTimeString()}
         </div>
@@ -88,9 +118,11 @@ function App() {
         <p>Real-time market data • Updates every 30 seconds</p>
       </footer>
       
-      {showModal && selectedStock && (
+      {/* Detailed Stock Modal */}
+      {showModal && (
         <DetailedStockView
           stock={selectedStock}
+          loading={modalLoading}
           onClose={handleCloseModal}
         />
       )}
