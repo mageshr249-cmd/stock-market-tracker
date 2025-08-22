@@ -1,8 +1,11 @@
 // API Configuration
 const API_CONFIG = {
-  // Replace with your actual API key from your chosen financial data provider
+  // Finnhub API configuration
+  FINNHUB_API_KEY: process.env.REACT_APP_FINNHUB_API_KEY || 'YOUR_FINNHUB_API_KEY_HERE',
+  FINNHUB_BASE_URL: 'https://finnhub.io/api/v1',
+  // Legacy configuration (kept for backward compatibility)
   API_KEY: process.env.REACT_APP_STOCK_API_KEY || 'YOUR_API_KEY_HERE',
-  BASE_URL: 'https://api.example.com/v1', // Replace with actual API base URL
+  BASE_URL: 'https://api.example.com/v1',
   ENDPOINTS: {
     MARKET_DATA: '/market/indices',
     STOCK_QUOTE: '/stock/quote',
@@ -33,220 +36,106 @@ const MOCK_DATA = [
     marketCap: 890000000000,
     high: 380.67,
     low: 376.89
-  },
-  {
-    symbol: 'IWM',
-    name: 'iShares Russell 2000 ETF',
-    price: 198.76,
-    change: 0.87,
-    changePercent: 0.44,
-    volume: 23456700,
-    marketCap: 340000000000,
-    high: 199.45,
-    low: 197.23
-  },
-  {
-    symbol: 'DIA',
-    name: 'SPDR Dow Jones Industrial Average ETF Trust',
-    price: 354.23,
-    change: 1.56,
-    changePercent: 0.44,
-    volume: 12345600,
-    marketCap: 280000000000,
-    high: 355.12,
-    low: 352.67
-  },
-  {
-    symbol: 'VTI',
-    name: 'Vanguard Total Stock Market ETF',
-    price: 234.89,
-    change: 0.98,
-    changePercent: 0.42,
-    volume: 18765400,
-    marketCap: 1500000000000,
-    high: 235.67,
-    low: 233.45
-  },
-  {
-    symbol: 'ARKK',
-    name: 'ARK Innovation ETF',
-    price: 67.34,
-    change: -0.45,
-    changePercent: -0.66,
-    volume: 9876543,
-    marketCap: 45000000000,
-    high: 68.12,
-    low: 66.78
   }
 ];
 
 /**
- * Fetches market data from the API or returns mock data
- * @returns {Promise<Array>} Array of market index data
+ * Fetches comprehensive stock details including quote, profile, and news from Finnhub
+ * @param {string} symbol - The stock symbol (e.g., 'AAPL', 'GOOGL')
+ * @returns {Promise<Object>} Object containing quote, profile, and news data
  */
-export const fetchMarketData = async () => {
+export const fetchStockDetails = async (symbol) => {
+  if (!symbol) {
+    throw new Error('Stock symbol is required');
+  }
+
+  const apiKey = API_CONFIG.FINNHUB_API_KEY;
+  const baseUrl = API_CONFIG.FINNHUB_BASE_URL;
+
+  if (!apiKey || apiKey === 'YOUR_FINNHUB_API_KEY_HERE') {
+    console.warn('Finnhub API key not configured, using mock data');
+    // Return mock data structure for development
+    return {
+      quote: {
+        c: 150.00, // current price
+        h: 152.00, // high price
+        l: 148.00, // low price
+        o: 149.00, // open price
+        pc: 148.50, // previous close
+        t: Date.now() / 1000 // timestamp
+      },
+      profile: {
+        name: `${symbol} Company`,
+        ticker: symbol,
+        exchange: 'NASDAQ',
+        ipo: '2000-01-01',
+        marketCapitalization: 1000000,
+        shareOutstanding: 1000000,
+        logo: '',
+        weburl: `https://example.com`,
+        finnhubIndustry: 'Technology'
+      },
+      news: [
+        {
+          category: 'general',
+          datetime: Date.now() / 1000,
+          headline: `Latest news about ${symbol}`,
+          id: 1,
+          image: '',
+          related: symbol,
+          source: 'Example News',
+          summary: `This is a sample news article about ${symbol}.`,
+          url: 'https://example.com/news'
+        }
+      ]
+    };
+  }
+
   try {
-    // Check if we should use real API (when API key is configured)
-    if (API_CONFIG.API_KEY && API_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE') {
-      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.MARKET_DATA}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${API_CONFIG.API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      });
+    // Fetch quote, profile, and news data in parallel
+    const [quoteResponse, profileResponse, newsResponse] = await Promise.all([
+      fetch(`${baseUrl}/quote?symbol=${symbol}&token=${apiKey}`),
+      fetch(`${baseUrl}/stock/profile2?symbol=${symbol}&token=${apiKey}`),
+      fetch(`${baseUrl}/company-news?symbol=${symbol}&from=${getDateString(30)}&to=${getDateString(0)}&token=${apiKey}`)
+    ]);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.results || data.indices || data; // Adjust based on API response structure
-    } else {
-      // Use mock data for development
-      console.log('Using mock data - configure API_KEY for real data');
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Add some randomness to mock data to simulate real-time updates
-      return MOCK_DATA.map(item => ({
-        ...item,
-        price: item.price + (Math.random() - 0.5) * 2, // Random price fluctuation
-        change: (Math.random() - 0.5) * 10, // Random change
-        changePercent: (Math.random() - 0.5) * 2 // Random percentage change
-      }));
+    // Check if all requests were successful
+    if (!quoteResponse.ok || !profileResponse.ok || !newsResponse.ok) {
+      throw new Error('One or more API requests failed');
     }
+
+    // Parse JSON responses
+    const [quote, profile, news] = await Promise.all([
+      quoteResponse.json(),
+      profileResponse.json(),
+      newsResponse.json()
+    ]);
+
+    return {
+      quote,
+      profile,
+      news: news.slice(0, 10) // Limit to 10 most recent news items
+    };
   } catch (error) {
-    console.error('Error fetching market data:', error);
-    throw error;
+    console.error(`Error fetching stock details for ${symbol}:`, error);
+    throw new Error(`Failed to fetch stock details for ${symbol}: ${error.message}`);
   }
 };
 
 /**
- * Fetches a single stock quote
- * @param {string} symbol - Stock symbol to fetch
- * @returns {Promise<Object>} Stock quote data
+ * Helper function to get date string in YYYY-MM-DD format
+ * @param {number} daysAgo - Number of days ago from today
+ * @returns {string} Date string in YYYY-MM-DD format
  */
-export const fetchStockQuote = async (symbol) => {
-  try {
-    if (API_CONFIG.API_KEY && API_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE') {
-      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.STOCK_QUOTE}?symbol=${symbol}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${API_CONFIG.API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } else {
-      // Return mock data for the requested symbol
-      const mockQuote = MOCK_DATA.find(item => item.symbol === symbol.toUpperCase());
-      
-      if (!mockQuote) {
-        throw new Error(`Symbol ${symbol} not found in mock data`);
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      return {
-        ...mockQuote,
-        price: mockQuote.price + (Math.random() - 0.5) * 2,
-        change: (Math.random() - 0.5) * 10,
-        changePercent: (Math.random() - 0.5) * 2
-      };
-    }
-  } catch (error) {
-    console.error(`Error fetching quote for ${symbol}:`, error);
-    throw error;
-  }
+const getDateString = (daysAgo) => {
+  const date = new Date();
+  date.setDate(date.getDate() - daysAgo);
+  return date.toISOString().split('T')[0];
 };
 
-/**
- * Fetches multiple stock quotes in batch
- * @param {Array<string>} symbols - Array of stock symbols
- * @returns {Promise<Array>} Array of stock quote data
- */
-export const fetchBatchQuotes = async (symbols) => {
-  try {
-    if (API_CONFIG.API_KEY && API_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE') {
-      const symbolsParam = symbols.join(',');
-      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.BATCH_QUOTES}?symbols=${symbolsParam}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${API_CONFIG.API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.quotes || data.results || data;
-    } else {
-      // Return mock data for requested symbols
-      const quotes = symbols.map(symbol => {
-        const mockQuote = MOCK_DATA.find(item => item.symbol === symbol.toUpperCase());
-        
-        if (!mockQuote) {
-          return null; // Skip symbols not found in mock data
-        }
-        
-        return {
-          ...mockQuote,
-          price: mockQuote.price + (Math.random() - 0.5) * 2,
-          change: (Math.random() - 0.5) * 10,
-          changePercent: (Math.random() - 0.5) * 2
-        };
-      }).filter(Boolean); // Remove null entries
-      
-      await new Promise(resolve => setTimeout(resolve, 400));
-      
-      return quotes;
-    }
-  } catch (error) {
-    console.error('Error fetching batch quotes:', error);
-    throw error;
-  }
+// Legacy export for backward compatibility
+export default {
+  API_CONFIG,
+  MOCK_DATA,
+  fetchStockDetails
 };
-
-/**
- * Utility function to format API errors for user display
- * @param {Error} error - The error object
- * @returns {string} User-friendly error message
- */
-export const formatAPIError = (error) => {
-  if (error.message.includes('403')) {
-    return 'API access denied. Please check your API key.';
-  }
-  if (error.message.includes('429')) {
-    return 'API rate limit exceeded. Please try again later.';
-  }
-  if (error.message.includes('500')) {
-    return 'API server error. Please try again later.';
-  }
-  if (error.message.includes('network')) {
-    return 'Network error. Please check your connection.';
-  }
-  
-  return 'Unable to fetch market data. Please try again later.';
-};
-
-/**
- * Configuration helper to check if API is properly configured
- * @returns {boolean} True if API is configured
- */
-export const isAPIConfigured = () => {
-  return API_CONFIG.API_KEY && API_CONFIG.API_KEY !== 'YOUR_API_KEY_HERE';
-};
-
-// Export configuration for external use
-export { API_CONFIG };
